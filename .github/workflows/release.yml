@@ -1,0 +1,125 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Get version from tag
+        id: version
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: go test -race -count=1 ./...
+
+      # ─── Linux ────────────────────────────────────────────────
+      - name: Build linux/amd64
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: amd64
+        run: go build -trimpath -ldflags "-s -w" -o ciel-linux-amd64 ./cmd/hermes
+
+      - name: Build linux/arm64
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: arm64
+        run: go build -trimpath -ldflags "-s -w" -o ciel-linux-arm64 ./cmd/hermes
+
+      # ─── macOS ────────────────────────────────────────────────
+      - name: Build darwin/amd64
+        env:
+          CGO_ENABLED: "0"
+          GOOS: darwin
+          GOARCH: amd64
+        run: go build -trimpath -ldflags "-s -w" -o ciel-darwin-amd64 ./cmd/hermes
+
+      - name: Build darwin/arm64
+        env:
+          CGO_ENABLED: "0"
+          GOOS: darwin
+          GOARCH: arm64
+        run: go build -trimpath -ldflags "-s -w" -o ciel-darwin-arm64 ./cmd/hermes
+
+      # ─── Windows ──────────────────────────────────────────────
+      - name: Build windows/amd64
+        env:
+          CGO_ENABLED: "0"
+          GOOS: windows
+          GOARCH: amd64
+        run: go build -trimpath -ldflags "-s -w" -o ciel-windows-amd64.exe ./cmd/hermes
+
+      - name: Build windows/arm64
+        env:
+          CGO_ENABLED: "0"
+          GOOS: windows
+          GOARCH: arm64
+        run: go build -trimpath -ldflags "-s -w" -o ciel-windows-arm64.exe ./cmd/hermes
+
+      # ─── Checksums ────────────────────────────────────────────
+      - name: Generate checksums
+        run: |
+          sha256sum ciel-linux-amd64 ciel-linux-arm64 \
+                    ciel-darwin-amd64 ciel-darwin-arm64 \
+                    ciel-windows-amd64.exe ciel-windows-arm64.exe \
+            > checksums.txt
+          cat checksums.txt
+
+      # ─── GitHub Release ───────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "Ciel Agent ${{ steps.version.outputs.tag }}"
+          body: |
+            ## Ciel Agent ${{ steps.version.outputs.tag }}
+
+            ### Downloads
+            | Platform | Architecture | Binary |
+            |----------|-------------|--------|
+            | Linux    | amd64       | `ciel-linux-amd64` |
+            | Linux    | arm64       | `ciel-linux-arm64` |
+            | macOS    | Intel       | `ciel-darwin-amd64` |
+            | macOS    | Apple Silicon | `ciel-darwin-arm64` |
+            | Windows  | amd64       | `ciel-windows-amd64.exe` |
+            | Windows  | arm64       | `ciel-windows-arm64.exe` |
+
+            ### Quick Start
+            ```bash
+            # Download and make executable (Linux/macOS)
+            chmod +x ciel-linux-amd64
+            ./ciel-linux-amd64 setup
+
+            # Windows
+            .\ciel-windows-amd64.exe setup
+            ```
+          files: |
+            ciel-linux-amd64
+            ciel-linux-arm64
+            ciel-darwin-amd64
+            ciel-darwin-arm64
+            ciel-windows-amd64.exe
+            ciel-windows-arm64.exe
+            checksums.txt
+          draft: false
+          prerelease: false

@@ -1,0 +1,42 @@
+# Binaries
+*.exe
+*.exe~
+ciel
+hermes
+dist/
+
+# Config & secrets
+config.yaml
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temp
+*.tmp
+*.bak
+
+# Old/backup
+hermes.exe~
+
+# Node artifacts
+node_modules/
+
+# Build output
+*.log
+
+# Monid subproject (separate repo)
+hermes-monid-websearch/
+install_monid.ps1

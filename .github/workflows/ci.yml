@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Vet / Test / Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.24']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -race -count=1 ./...
+
+      - name: Build (linux/amd64)
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: amd64
+        run: go build -trimpath -o ciel-linux-amd64 ./cmd/hermes
+
+      - name: Build (linux/arm64)
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: arm64
+        run: go build -trimpath -o ciel-linux-arm64 ./cmd/hermes
+
+  build-matrix:
+    name: Cross-compile (${{ matrix.os }}/${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    needs: ci
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+          - os: darwin
+            arch: amd64
+          - os: darwin
+            arch: arm64
+          - os: windows
+            arch: amd64
+          - os: windows
+            arch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Build
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          EXT=""
+          if [ "${{ matrix.os }}" = "windows" ]; then EXT=".exe"; fi
+          go build -trimpath -ldflags "-s -w" -o ciel-${{ matrix.os }}-${{ matrix.arch }}${EXT} ./cmd/hermes
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ciel-${{ matrix.os }}-${{ matrix.arch }}
+          path: ciel-*
+          retention-days: 7

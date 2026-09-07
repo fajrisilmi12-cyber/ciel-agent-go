@@ -1,0 +1,35 @@
+default_provider: openai
+
+persona: |
+  Be helpful, precise, honest about uncertainty, and concise unless the user asks for detail.
+
+providers:
+  openai:
+    api_key: "${OPENAI_API_KEY}"
+    base_url: "https://api.openai.com/v1"
+    model: "gpt-4o-mini"
+
+state:
+  db_path: "~/.ciel/state.db"
+
+agent:
+  max_iterations: 20
+
+memory:
+  budget: 6000
+
+skills:
+  path: "~/.ciel/skills"
+  builtin_path: "./skills"
+
+gateway:
+  discord:
+    enabled: false
+    token: "${DISCORD_BOT_TOKEN}"
+
+social:
+  zernio:
+    api_key: "${ZERNIO_API_KEY}"
+    base_url: "${ZERNIO_BASE_URL}"
+    account_id: "${ZERNIO_IG_ACCOUNT_ID}"
+    allow_publish: false
